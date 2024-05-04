@@ -6,22 +6,19 @@ RUN pip install flask gunicorn
 CMD gunicorn -b 0.0.0.0 app:app
 
 Описание задания
-  build-deploy:
-    runs-on: ubuntu-latest
-    needs: testing
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          push: true
-          tags: ${{ github.actor }}/students:latest
+restart-docker-compose:
+  runs-on: ubuntu-latest
+  needs: build-deploy
+  steps:
+    - name: Run remote script with SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.KEY }}
+        script: |
+         cd $HOME
+         docker compose down
+         docker pull ghcr.io/${{ github.repository }}:main
+         docker compose up -d
